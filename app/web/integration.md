@@ -120,3 +120,5 @@ GET /api/clients/{id}/config
 ## 接入地址
 
 格式为 https://SIP域名/api/connect；没有 SIP 域名时使用公网 IP。面板域名仅用于网页管理。SIP 域名保持仅 DNS；保存后自动申请 HTTPS 证书并配置接入接口，独立 SIP 域名不开放管理页面。已有接入码保持有效，更新本地接入地址即可。
+
+请求方法不是 POST 时，返回 `405 Method Not Allowed`、`Allow: POST` 和 `{"error":"Method Not Allowed"}`。HEAD 响应不含正文。

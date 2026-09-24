@@ -161,7 +161,7 @@ class EndpointTests(unittest.TestCase):
   self.assertNotIn('handle /api/connect',m.caddy_config('',''))
  def test_sip_browser_requests_only_show_404(self):
   from unittest.mock import Mock
-  for path in ['/api/state','/api/connect','/api/connect?test=1']:
+  for path in ['/api/state','/','/gly']:
    handler=object.__new__(m.Handler);handler.command='GET';handler.path=path
    handler.headers={'Host':'sip.example.com','X-Forwarded-Proto':'https'}
    handler.send=Mock()
@@ -169,6 +169,39 @@ class EndpointTests(unittest.TestCase):
     handler.dispatch()
    handler.send.assert_called_once_with(404,b'','text/html; charset=utf-8',csp="default-src 'none'; frame-ancestors 'none'")
 
+
+class ConnectMethodTests(unittest.TestCase):
+ def test_wrong_method_returns_405_before_login_or_csrf(self):
+  from unittest.mock import Mock
+  for host in [m.PUBLIC_IP,'panel.example.com','sip.example.com']:
+   for method in ['GET','HEAD','OPTIONS','DELETE','PUT','PATCH']:
+    for path in ['/api/connect','/api/connect?test=1']:
+     handler=object.__new__(m.Handler)
+     handler.command=method;handler.path=path
+     handler.headers={'Host':host,'X-Forwarded-Proto':'https'}
+     handler.send=Mock();handler.session=Mock(side_effect=AssertionError('Session must not be read'))
+     with patch.object(m,'load_settings',return_value={'sipDomain':'sip.example.com','panelDomain':'panel.example.com'}):
+      handler.dispatch()
+     handler.send.assert_called_once_with(405,{'error':'Method Not Allowed'},extra={'Allow':'POST'})
+ def test_post_still_requires_access_code(self):
+  from unittest.mock import Mock
+  handler=object.__new__(m.Handler)
+  handler.command='POST';handler.path='/api/connect'
+  handler.headers={'Host':m.PUBLIC_IP,'X-Forwarded-Proto':'https'}
+  handler.client_address=('127.0.0.1',12345)
+  with patch.object(m,'load_settings',return_value={'sipDomain':'','panelDomain':''}),patch.object(m,'check_rate'):
+   with self.assertRaises(m.UserError) as error:handler.dispatch()
+  self.assertEqual(error.exception.status,401)
+ def test_head_response_contains_headers_without_body(self):
+  from unittest.mock import Mock
+  import io
+  handler=object.__new__(m.Handler);handler.command='HEAD'
+  handler.wfile=io.BytesIO()
+  handler.send_response=Mock();handler.send_header=Mock();handler.end_headers=Mock()
+  handler.send(405,{'error':'Method Not Allowed'},extra={'Allow':'POST'})
+  handler.send_response.assert_called_once_with(405)
+  handler.send_header.assert_any_call('Allow','POST')
+  self.assertEqual(handler.wfile.getvalue(),b'')
 
 class AdminEntryTests(unittest.TestCase):
  def dispatch(self,path,host=None):

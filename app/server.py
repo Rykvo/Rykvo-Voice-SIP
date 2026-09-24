@@ -511,7 +511,8 @@ class Handler(BaseHTTPRequestHandler):
         for key,val in (extra or {}).items():
             self.send_header(key,val)
         self.end_headers()
-        self.wfile.write(value)
+        if self.command != 'HEAD':
+            self.wfile.write(value)
 
     def not_found(self):
         return self.send(404,b'','text/html; charset=utf-8',csp="default-src 'none'; frame-ancestors 'none'")
@@ -542,12 +543,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def dispatch(self):
         host = self.headers.get('Host','')
+        connect_path = urllib.parse.urlsplit(self.path).path == '/api/connect'
         settings=load_settings()
         local=host in (f'127.0.0.1:{PORT}',f'localhost:{PORT}')
         public_hosts={PUBLIC_IP,PUBLIC_IP+':443'}
         if settings['panelDomain']: public_hosts.update({settings['panelDomain'],settings['panelDomain']+':443'})
         sip_hosts = {settings['sipDomain'],settings['sipDomain']+':443'} if settings['sipDomain'] else set()
-        if host in sip_hosts and host not in public_hosts and not (self.command == 'POST' and self.path == '/api/connect'):
+        if host in sip_hosts and host not in public_hosts and not connect_path:
             return self.not_found()
         public_hosts.update(sip_hosts)
         if not local and host not in public_hosts:
@@ -555,7 +557,9 @@ class Handler(BaseHTTPRequestHandler):
         scheme='http' if local else 'https'
         if not local and self.headers.get('X-Forwarded-Proto')!='https':
             raise UserError('请使用 HTTPS 访问管理面板。',403)
-        agent_request = self.command == 'POST' and self.path == '/api/connect'
+        if connect_path and self.command != 'POST':
+            return self.send(405,{'error':'Method Not Allowed'},extra={'Allow':'POST'})
+        agent_request = self.command == 'POST' and connect_path
         if agent_request and self.headers.get('Origin'):
             raise UserError('请由本地服务器后端调用接入接口。',403)
         if self.command != 'GET' and not agent_request and self.headers.get('Origin') != scheme+'://'+host:
@@ -715,6 +719,10 @@ class Handler(BaseHTTPRequestHandler):
     do_GET=handle_request
     do_POST=handle_request
     do_DELETE=handle_request
+    do_HEAD=handle_request
+    do_OPTIONS=handle_request
+    do_PUT=handle_request
+    do_PATCH=handle_request
 
 if __name__=='__main__':
     if len(sys.argv)>1 and sys.argv[1]=='apply':
