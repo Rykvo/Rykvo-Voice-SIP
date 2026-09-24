@@ -21,6 +21,8 @@ import urllib.request
 SOURCE = Path(__file__).resolve().parents[1]
 ROOT = Path('/opt/sip-tunnel')
 MARKER = ROOT / '.rykvo-managed.json'
+CLI = Path('/usr/local/bin/rykvo-sip')
+CLI_MARKER = '# Rykvo Voice SIP command'
 SOURCE_REPLACED = False
 SERVICES = ('sip-caddy', 'sip-simple-panel', 'sip-portmap', 'sip-wireguard')
 CHAINS = {'nat': ('SIPT_DNAT', 'SIPT_SNAT'), 'filter': ('SIPT_FORWARD', 'SIPT_INPUT')}
@@ -76,6 +78,8 @@ def preflight():
         raise ValueError('需要 amd64/arm64、systemd 和支持 WireGuard 的云主机。')
     if ROOT.is_symlink():
         raise ValueError('安装目录是符号链接，已停止。')
+    if CLI.is_symlink() or (CLI.exists() and CLI_MARKER not in CLI.read_text()):
+        raise ValueError('rykvo-sip 命令已被其他程序占用。')
     if MARKER.exists():
         read_marker()
         print('环境检查通过，将保留已有数据。')
@@ -307,6 +311,7 @@ def install():
                 raise RuntimeError('服务启动检查未通过，请检查 systemd 日志。')
             time.sleep(2)
     run(['systemctl', 'is-active', *SERVICES], capture=False)
+    write(CLI, (SOURCE / 'deploy.sh').read_text(), 0o755)
     print(f'部署完成：https://{settings["panelDomain"] or panel.PUBLIC_IP}/')
     print('HTTPS 证书自动申请；请确保云防火墙已开放 TCP 80/443、UDP 51820 和客户端端口段。')
 
@@ -347,6 +352,8 @@ def uninstall(purge=False):
             if run(['sysctl', '-n', key]).stdout.strip() == '1':
                 run(['sysctl', '-w', key + '=' + value])
     run(['systemctl', 'daemon-reload'])
+    if CLI.is_file() and not CLI.is_symlink() and CLI_MARKER in CLI.read_text():
+        CLI.unlink()
     if purge:
         if ROOT.resolve() != Path('/opt/sip-tunnel') or ROOT.is_symlink():
             raise ValueError('删除路径异常。')

@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Shell syntax
-        run: bash -n install.sh uninstall.sh
+        run: bash -n deploy.sh install.sh uninstall.sh
       - name: Backend and installer tests
         env:
           PYTHONDONTWRITEBYTECODE: '1'
@@ -17,3 +17,5 @@ jobs:
           python3 -B -m unittest discover -s tests -p 'test_deploy.py'
       - name: UI tests
         run: node tests/ui.cjs
+      - name: Piped deployment prompts and cleanup
+        run: sudo python3 -B tests/test_bootstrap.py
