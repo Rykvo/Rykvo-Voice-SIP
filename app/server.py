@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Loopback-only SIP tunnel manager; WireGuard keys remain in wg-easy."""
-import base64
 import configparser
 import contextlib
 import fcntl
@@ -25,9 +24,6 @@ import urllib.request
 
 ROOT = Path(os.environ.get('SIP_ROOT', '/opt/sip-tunnel'))
 WEB = Path(__file__).resolve().parent / 'web'
-NOT_FOUND_PAGE = (WEB / '404.html').read_text(encoding='utf-8')
-NOT_FOUND_STYLE_HASH = base64.b64encode(hashlib.sha256(re.search(r'<style>(.*?)</style>',NOT_FOUND_PAGE,re.S)[1].encode()).digest()).decode()
-NOT_FOUND_CSP = "default-src 'none'; style-src 'sha256-" + NOT_FOUND_STYLE_HASH + "'; img-src data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
 STATE = ROOT / 'clients.json'
 SETTINGS = ROOT / 'settings.json'
 ENROLLMENTS = ROOT / 'enrollments.json'
@@ -518,7 +514,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(value)
 
     def not_found(self):
-        return self.send(404,NOT_FOUND_PAGE,'text/html; charset=utf-8',csp=NOT_FOUND_CSP)
+        return self.send(404,b'','text/html; charset=utf-8',csp="default-src 'none'; frame-ancestors 'none'")
 
     def body(self):
         try:

@@ -126,15 +126,9 @@ class NetworkTests(unittest.TestCase):
   commands=[call.args[0] for call in run.call_args_list]
   self.assertTrue(any('-d' in args and '10.0.0.5' in args and 'PREROUTING' in args for args in commands))
 
-class NotFoundPageTests(unittest.TestCase):
- def test_minimal_page_has_pinned_styles_and_no_external_assets(self):
-  import base64,re
-  css=re.search(r'<style>(.*?)</style>',m.NOT_FOUND_PAGE,re.S)[1]
-  digest=base64.b64encode(hashlib.sha256(css.encode()).digest()).decode()
-  self.assertIn("'sha256-"+digest+"'",m.NOT_FOUND_CSP)
-  self.assertNotIn('unsafe-inline',m.NOT_FOUND_CSP)
-  self.assertNotIn('<script',m.NOT_FOUND_PAGE)
-  self.assertNotIn('href="/',m.NOT_FOUND_PAGE)
+class NotFoundTests(unittest.TestCase):
+ def test_no_custom_error_page_remains(self):
+  self.assertFalse((m.WEB/'404.html').exists())
 
  def test_api_index_is_404_without_login(self):
   from unittest.mock import Mock
@@ -147,8 +141,7 @@ class NotFoundPageTests(unittest.TestCase):
     handler.dispatch()
    status,page,content_type=handler.send.call_args.args
    self.assertEqual(status,404)
-   self.assertIn('<h1>404</h1>',page)
-   self.assertNotIn('__ASSET_VERSION__',page)
+   self.assertEqual(page,b'')
    self.assertEqual(content_type,'text/html; charset=utf-8')
 
 class EndpointTests(unittest.TestCase):
@@ -174,7 +167,7 @@ class EndpointTests(unittest.TestCase):
    handler.send=Mock()
    with patch.object(m,'load_settings',return_value={'sipDomain':'sip.example.com','panelDomain':'panel.example.com'}):
     handler.dispatch()
-   handler.send.assert_called_once_with(404,m.NOT_FOUND_PAGE,'text/html; charset=utf-8',csp=m.NOT_FOUND_CSP)
+   handler.send.assert_called_once_with(404,b'','text/html; charset=utf-8',csp="default-src 'none'; frame-ancestors 'none'")
 
 
 class AdminEntryTests(unittest.TestCase):
@@ -200,7 +193,7 @@ class AdminEntryTests(unittest.TestCase):
   for path in ['/','/?test=1','/app.js','/style.css','/favicon.ico','/logo.png','/unknown','/gly/unknown']:
    call=self.dispatch(path)
    self.assertEqual(call.args[0],404)
-   self.assertNotIn('/gly',call.args[1])
+   self.assertEqual(call.args[1],b'')
    self.assertNotIn('extra',call.kwargs)
  def test_assets_are_served_only_under_gly(self):
   for path in ['/gly/app.js','/gly/style.css','/gly/favicon.ico','/gly/logo.png']:
