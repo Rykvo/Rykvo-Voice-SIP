@@ -3,11 +3,15 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const html = fs.readFileSync('app/web/index.html', 'utf8');
 class Node {
-  constructor() { this.value=''; this.hidden=false; this.children=[]; this.dataset={}; this.attributes={}; this.classList={toggle(){}}; this.replacements=0; }
+  constructor() { this.value=''; this.hidden=false; this.children=[]; this.dataset={}; this.attributes={}; this.classList={toggle(){}}; this.replacements=0; this.listeners={}; }
   append(...items) { this.children.push(...items); }
   replaceChildren(fragment) { this.children=fragment.children || []; this.replacements++; }
   setAttribute(key,value) { this.attributes[key]=value; }
-  addEventListener() {}
+  addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); }
+  getAttribute(key) { return this.attributes[key]; }
+  removeAttribute(key) { delete this.attributes[key]; }
+  focus() { this.focused=true; }
+  close(value='') { this.returnValue=value; for (const callback of this.listeners.close || []) callback(); }
   reset() {}
   showModal() {}
 }
@@ -19,7 +23,7 @@ const context={
   AbortController,Date,console
 };
 vm.createContext(context);
-vm.runInContext(fs.readFileSync('app/web/app.js','utf8')+'\nthis.test={render,selectFilter,renderClients,statusOf,showLogin,showHelp,copyField};',context);
+vm.runInContext(fs.readFileSync('app/web/app.js','utf8')+'\nthis.test={render,selectFilter,renderClients,statusOf,showLogin,showHelp,copyField,confirmAction,validateForm,removeClient};',context);
 const clients=[
  {id:1,name:'one',ip:'10.77.0.2',start:20000,end:29999,exists:true,enabled:true,lastHandshake:new Date().toISOString()},
  {id:2,name:'two',ip:'10.77.0.3',start:30000,end:39999,exists:true,enabled:true,lastHandshake:null},
@@ -55,3 +59,42 @@ context.test.copyField('connect-endpoint').then(() => {
  assert.equal(nodes['connect-endpoint'].value,'https://127.0.0.1/api/connect');
  console.log('PASS: Single enrollment address uses SIP domain, clipboard copy, and IP fallback.');
 }).catch(error => {console.error(error);process.exitCode=1});
+
+
+assert.ok(!/\b(?:alert|confirm|prompt|reportValidity)\s*\(/.test(fs.readFileSync('app/web/app.js','utf8')));
+for (const form of html.matchAll(/<form\b[^>]*>/g)) assert.ok(form[0].includes('novalidate'));
+assert.ok(html.includes('role="alertdialog"'));
+const invalid = new Node();
+invalid.willValidate=true;invalid.validity={valid:false,valueMissing:true};invalid.attributes['aria-label']='账号';
+assert.equal(context.test.validateForm({elements:[invalid]},'login-error'),false);
+assert.equal(nodes['login-error'].textContent,'请填写账号');
+assert.equal(invalid.focused,true);
+invalid.validity={valid:true};
+assert.equal(context.test.validateForm({elements:[invalid]},'login-error'),true);
+console.log('PASS: all forms use inline validation; no browser alert, confirm or prompt.');
+
+(async () => {
+ const calls=[];
+ context.fetch=async (path,options) => {
+  calls.push([path,options.method]);
+  return {ok:true,json:async () => options.method==='DELETE' ? {} : {clients,csrf:'test',publicIp:'127.0.0.1',settings:{sipDomain:'',panelDomain:''}}};
+ };
+ const button=new Node();
+ let task=context.test.removeClient(clients[0],button);
+ assert.equal(calls.length,0,'No delete before confirmation');
+ assert.equal(nodes['confirm-cancel'].focused,true);
+ nodes['confirm-dialog'].close();
+ await task;
+ assert.equal(calls.length,0,'Cancel and Escape must not delete');
+ assert.equal(button.disabled,false);
+ task=context.test.removeClient(clients[0],button);
+ assert.equal(calls.length,0);
+ nodes['confirm-dialog'].close('confirm');
+ // The initial page load is pending in the fixture; skip its shared refresh task.
+ vm.runInContext('refreshTask = null',context);
+ await task;
+ assert.deepEqual(calls[0],['/api/clients/1','DELETE']);
+ assert.equal(calls.filter(call=>call[1]==='DELETE').length,1);
+ assert.equal(button.disabled,false);
+ console.log('PASS: in-page confirmation cancels safely and sends one delete after approval.');
+})().catch(error=>{console.error(error);process.exitCode=1});

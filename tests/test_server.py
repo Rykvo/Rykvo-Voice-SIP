@@ -176,6 +176,38 @@ class EndpointTests(unittest.TestCase):
     handler.dispatch()
    handler.send.assert_called_once_with(404,m.NOT_FOUND_PAGE,'text/html; charset=utf-8',csp=m.NOT_FOUND_CSP)
 
+
+class AdminEntryTests(unittest.TestCase):
+ def dispatch(self,path,host=None):
+  from unittest.mock import Mock
+  handler=object.__new__(m.Handler)
+  handler.command='GET';handler.path=path
+  handler.headers={'Host':host or m.PUBLIC_IP,'X-Forwarded-Proto':'https'}
+  handler.send=Mock()
+  handler.session=Mock(side_effect=AssertionError('Public routing must not read sessions'))
+  with patch.object(m,'load_settings',return_value={'sipDomain':'sip.example.com','panelDomain':'panel.example.com'}):
+   handler.dispatch()
+  return handler.send.call_args
+ def test_only_gly_serves_panel_for_ip_and_panel_domain(self):
+  for host in [m.PUBLIC_IP,'panel.example.com']:
+   for path in ['/gly','/gly/','/gly?test=1']:
+    call=self.dispatch(path,host)
+    self.assertEqual(call.args[0],200)
+    self.assertIn('id="login-form"',call.args[1])
+    self.assertIn('/gly/app.js?v=',call.args[1])
+    self.assertNotIn('__ASSET_VERSION__',call.args[1])
+ def test_root_and_old_assets_are_404_without_redirect(self):
+  for path in ['/','/?test=1','/app.js','/style.css','/favicon.ico','/logo.png','/unknown','/gly/unknown']:
+   call=self.dispatch(path)
+   self.assertEqual(call.args[0],404)
+   self.assertNotIn('/gly',call.args[1])
+   self.assertNotIn('extra',call.kwargs)
+ def test_assets_are_served_only_under_gly(self):
+  for path in ['/gly/app.js','/gly/style.css','/gly/favicon.ico','/gly/logo.png']:
+   self.assertEqual(self.dispatch(path).args[0],200)
+ def test_sip_only_domain_does_not_expose_gly(self):
+  self.assertEqual(self.dispatch('/gly','sip.example.com').args[0],404)
+
 class AdministratorTests(unittest.TestCase):
  def setUp(self):
   self.temp=tempfile.TemporaryDirectory()

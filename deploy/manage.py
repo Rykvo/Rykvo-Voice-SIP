@@ -302,7 +302,7 @@ def install():
     run(['systemctl', 'restart', 'sip-wireguard', 'sip-portmap', 'sip-simple-panel', 'sip-caddy'])
     for attempt in range(30):
         try:
-            with OPENER.open('http://127.0.0.1:51822/', timeout=3) as response:
+            with OPENER.open('http://127.0.0.1:51822/gly', timeout=3) as response:
                 assert response.status == 200
             panel.authenticate_service().call('session', method='DELETE')
             break
@@ -312,7 +312,7 @@ def install():
             time.sleep(2)
     run(['systemctl', 'is-active', *SERVICES], capture=False)
     write(CLI, (SOURCE / 'deploy.sh').read_text(), 0o755)
-    print(f'部署完成：https://{settings["panelDomain"] or panel.PUBLIC_IP}/')
+    print(f'部署完成：https://{settings["panelDomain"] or panel.PUBLIC_IP}/gly')
     print('HTTPS 证书自动申请；请确保云防火墙已开放 TCP 80/443、UDP 51820 和客户端端口段。')
 
 

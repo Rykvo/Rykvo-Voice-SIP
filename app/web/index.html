@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Rykvo Voice SIP</title>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=__ASSET_VERSION__">
-  <link rel="apple-touch-icon" href="/logo.png?v=__ASSET_VERSION__">
-  <link rel="stylesheet" href="/style.css?v=__ASSET_VERSION__">
-  <script src="/app.js?v=__ASSET_VERSION__" defer></script>
+  <link rel="icon" type="image/x-icon" href="/gly/favicon.ico?v=__ASSET_VERSION__">
+  <link rel="apple-touch-icon" href="/gly/logo.png?v=__ASSET_VERSION__">
+  <link rel="stylesheet" href="/gly/style.css?v=__ASSET_VERSION__">
+  <script src="/gly/app.js?v=__ASSET_VERSION__" defer></script>
 </head>
 <body>
 <svg class="svg-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><symbol id="i-server" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="7" rx="2"/><rect x="4" y="14" width="16" height="7" rx="2"/><path d="M8 6.5h.01M8 17.5h.01M12 6.5h4M12 17.5h4M12 10v4"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></symbol><symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h12"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol><symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol></defs></svg>
 <div id="boot-view" class="boot"><span id="boot-message">载入中…</span><button id="boot-retry" class="secondary" hidden>重试</button></div>
 <section id="login-view" class="login-wrap" hidden>
   <div class="login-card">
-    <img class="brand-icon large" src="/logo.png?v=__ASSET_VERSION__" width="53" height="53" alt="">
+    <img class="brand-icon large" src="/gly/logo.png?v=__ASSET_VERSION__" width="53" height="53" alt="">
     <h1>Rykvo Voice SIP</h1>
-    <form id="login-form">
+    <form id="login-form" novalidate>
       <label for="username">账号</label>
       <input id="username" autocomplete="username" required>
       <label for="password">密码</label>
@@ -29,7 +29,7 @@
 </section>
 <div id="app-view" class="window" hidden>
   <aside class="sidebar">
-    <a class="brand" href="/"><img class="brand-icon" src="/logo.png?v=__ASSET_VERSION__" width="36" height="36" alt=""><strong>Rykvo Voice SIP</strong></a>
+    <a class="brand" href="/"><img class="brand-icon" src="/gly/logo.png?v=__ASSET_VERSION__" width="36" height="36" alt=""><strong>Rykvo Voice SIP</strong></a>
     <nav aria-label="主导航">
       <button class="nav-item active" data-page="clients"><span class="nav-icon blue"><svg><use href="#i-server"/></svg></span>客户端</button>
       <button class="nav-item" data-page="domains"><span class="nav-icon green"><svg><use href="#i-globe"/></svg></span>域名设置</button>
@@ -61,7 +61,7 @@
     <section id="page-domains" class="page" hidden>
       <div class="settings-panel">
         <header class="settings-heading"><span class="settings-symbol"><span class="nav-icon green"><svg><use href="#i-globe"/></svg></span></span><h1>域名设置</h1></header>
-        <form id="domain-form">
+        <form id="domain-form" novalidate>
           <div class="form-fields">
             <div class="form-field"><span class="field-label">公网 IP</span><span id="settings-ip">—</span></div>
             <div class="form-field"><label for="sip-domain">SIP 域名</label><input id="sip-domain" placeholder="sip.example.com" autocomplete="off" maxlength="253" spellcheck="false"></div>
@@ -75,7 +75,7 @@
     <section id="page-administrator" class="page" hidden>
       <div class="settings-panel">
         <header class="settings-heading"><span class="settings-symbol"><span class="nav-icon blue"><svg><use href="#i-lock"/></svg></span></span><h1>管理员</h1></header>
-        <form id="admin-form">
+        <form id="admin-form" novalidate>
           <div class="form-fields">
             <div class="form-field"><label for="admin-username">账号</label><input id="admin-username" autocomplete="off" maxlength="48" placeholder="留空不修改"></div>
             <div class="form-field"><label for="admin-current">当前密码</label><input id="admin-current" type="password" autocomplete="current-password" maxlength="512" placeholder="输入当前密码" required><button type="button" class="eye-button" data-password="admin-current" aria-label="显示当前密码" aria-pressed="false"><svg><use href="#i-eye"/></svg></button></div>
@@ -91,7 +91,7 @@
 </div>
 <dialog id="create-dialog">
   <div class="dialog-header"><h2>新建客户端</h2><button class="close-button" data-close="create-dialog" aria-label="关闭新建客户端">×</button></div>
-  <form id="create-form">
+  <form id="create-form" novalidate>
     <label for="client-name">名称</label><input id="client-name" maxlength="48" placeholder="家里的服务器" required>
     <label for="port-start">端口范围 <span class="label-note">TCP / UDP</span></label>
     <div class="range-input"><input id="port-start" type="number" min="1024" max="65535" placeholder="20000" aria-label="起始端口" required><span>—</span><input id="port-end" type="number" min="1024" max="65535" placeholder="29999" aria-label="结束端口" required></div>
@@ -105,6 +105,11 @@
   <div class="connection-field"><label for="connect-token">接入码</label><div class="copy-field"><input id="connect-token" type="text" readonly placeholder="点击下方生成"><button id="copy-token" class="secondary" disabled>复制</button></div></div>
   <p id="connect-error" class="error" role="alert"></p>
   <div class="dialog-actions"><button id="generate-token" class="primary">生成接入码</button></div>
+</dialog>
+<dialog id="confirm-dialog" class="confirm-dialog" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+  <h2 id="confirm-title"></h2>
+  <p id="confirm-message" class="confirm-message"></p>
+  <div class="dialog-actions"><button id="confirm-cancel" class="secondary" data-close="confirm-dialog" autofocus>取消</button><button id="confirm-accept" class="primary danger">删除</button></div>
 </dialog>
 <div id="toast" class="toast" role="status" hidden></div>
 </body>

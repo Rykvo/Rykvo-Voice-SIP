@@ -576,13 +576,14 @@ class Handler(BaseHTTPRequestHandler):
         if self.command == 'GET' and parsed.path in ('/api','/api/'):
             return self.not_found()
         asset_types = {'app.js':'text/javascript; charset=utf-8', 'style.css':'text/css; charset=utf-8', 'logo.png':'image/png', 'favicon.ico':'image/x-icon'}
-        if self.command == 'GET' and (parsed.path == '/' or parsed.path[1:] in asset_types):
+        asset_name = parsed.path.removeprefix('/gly/') if parsed.path.startswith('/gly/') else ''
+        if self.command == 'GET' and (parsed.path in ('/gly','/gly/') or asset_name in asset_types):
             assets = {name:(WEB/name).read_bytes() for name in asset_types}
             version = hashlib.sha256(b''.join(assets.values())).hexdigest()[:16]
-            if parsed.path == '/':
+            if parsed.path in ('/gly','/gly/'):
                 page = (WEB/'index.html').read_text(encoding='utf-8-sig').replace('__ASSET_VERSION__',version)
                 return self.send(200,page,'text/html; charset=utf-8')
-            filename = parsed.path[1:]
+            filename = asset_name
             mime = asset_types[filename]
             cache = 'public, max-age=31536000, immutable' if urllib.parse.parse_qs(parsed.query).get('v') == [version] else 'no-cache'
             etag = '"'+hashlib.sha256(assets[filename]).hexdigest()+'"'
@@ -593,6 +594,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
             return self.send(200,assets[filename],mime,{'ETag':etag},cache)
+        if not parsed.path.startswith('/api/'):
+            return self.not_found()
         if self.command == 'POST' and path == '/api/login':
             body = self.body()
             username,password = body.get('username'),body.get('password')

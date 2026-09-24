@@ -44,6 +44,12 @@ label { display:block; font-size:13px; font-weight:550; margin-bottom:8px }
 .primary svg { width:17px; height:17px }
 .secondary { background:#fff; border-color:#d9dce2; color:#444951 }
 .secondary:hover { background:#f2f3f6 }
+.primary.danger { background:#ff3b30; box-shadow:none }
+.primary.danger:hover { background:#e9342a }
+.confirm-dialog { width:420px }
+.confirm-message { margin-top:12px; color:#7c8491; font-size:13px; line-height:1.7; overflow-wrap:anywhere }
+#confirm-title { overflow-wrap:anywhere }
+input[aria-invalid="true"] { border-color:#ff3b30 }
 .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px }
 .stat { height:65px; padding:0 19px; background:#fff; border:1px solid #d1d4dc; border-radius:14px; display:flex; align-items:center; justify-content:space-between; text-align:left; color:#22252a }
 .stat>span { display:flex; align-items:center; gap:9px; color:#7c8492; font-size:13px }

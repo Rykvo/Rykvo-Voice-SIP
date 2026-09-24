@@ -11,6 +11,7 @@ let listSignature = '';
 let toastTimer;
 let connectingClient = null;
 let connectionView = 0;
+let confirmResolve = null;
 
 async function request(path, method = 'GET', body) {
   const controller = new AbortController();
@@ -142,10 +143,52 @@ async function copyField(id) {
   catch { $('connect-error').textContent = '复制失败，请检查浏览器剪贴板权限。'; }
 }
 
+function confirmAction(title, message) {
+  if (confirmResolve) return Promise.resolve(false);
+  $('confirm-title').textContent = title;
+  $('confirm-message').textContent = message;
+  const dialog = $('confirm-dialog');
+  dialog.returnValue = '';
+  const answer = new Promise(resolve => { confirmResolve = resolve; });
+  dialog.showModal();
+  $('confirm-cancel').focus();
+  return answer;
+}
+
+$('confirm-accept').addEventListener('click', () => $('confirm-dialog').close('confirm'));
+$('confirm-dialog').addEventListener('close', () => {
+  const resolve = confirmResolve;
+  confirmResolve = null;
+  if (resolve) resolve($('confirm-dialog').returnValue === 'confirm');
+});
+
+function validateForm(form, errorId) {
+  $(errorId).textContent = '';
+  const field = Array.from(form.elements).find(input => input.willValidate && !input.validity.valid);
+  if (!field) return true;
+  const name = field.getAttribute('aria-label') || field.labels?.[0]?.textContent.trim() || '内容';
+  const validity = field.validity;
+  let message = `请检查${name}`;
+  if (validity.valueMissing) message = `请填写${name}`;
+  else if (validity.tooShort) message = `${name}至少 ${field.minLength} 位`;
+  else if (validity.tooLong) message = `${name}最多 ${field.maxLength} 位`;
+  else if (validity.rangeUnderflow || validity.rangeOverflow) message = `${name}范围为 ${field.min}–${field.max}`;
+  else if (validity.badInput || validity.stepMismatch) message = `${name}请输入有效整数`;
+  $(errorId).textContent = message;
+  field.setAttribute('aria-invalid', 'true');
+  field.focus();
+  return false;
+}
+
+document.querySelectorAll('form').forEach(form => {
+  form.addEventListener('input', event => event.target.removeAttribute('aria-invalid'));
+});
+
 async function removeClient(client, button) {
-  if (!confirm(`删除「${client.name}」？\n连接密钥及 ${client.start}–${client.end} 端口转发将被撤销。`)) return;
+  if (button.disabled) return;
   button.disabled = true;
   try {
+    if (!await confirmAction(`删除「${client.name}」？`, `连接密钥和 ${client.start}–${client.end} 端口转发将撤销。`)) return;
     await request(`/api/clients/${client.id}`, 'DELETE');
     await refresh();
     toast('已删除');
@@ -242,6 +285,7 @@ function refresh() {
 
 $('login-form').addEventListener('submit', async event => {
   event.preventDefault();
+  if (!validateForm(event.target, 'login-error')) return;
   const button = event.target.querySelector('button');
   button.disabled = true;
   $('login-error').textContent = '';
@@ -262,6 +306,7 @@ $('login-form').addEventListener('submit', async event => {
 
 $('create-form').addEventListener('submit', async event => {
   event.preventDefault();
+  if (!validateForm(event.target, 'form-error')) return;
   $('create-button').disabled = true;
   $('create-button').textContent = '创建中…';
   $('form-error').textContent = '';
@@ -286,6 +331,7 @@ $('create-form').addEventListener('submit', async event => {
 });
 
 async function domains(save) {
+  if (!validateForm($('domain-form'), 'domain-message')) return;
   $('check-dns').disabled = true;
   $('save-domains').disabled = true;
   $('domain-message').textContent = '检查中…';
@@ -328,6 +374,7 @@ function clearAdminForm() {
 $('admin-form').addEventListener('input', () => { adminDirty = true; $('admin-error').textContent = ''; });
 $('admin-form').addEventListener('submit', async event => {
   event.preventDefault();
+  if (!validateForm(event.target, 'admin-error')) return;
   $('save-admin').disabled = true;
   $('admin-error').textContent = '';
   try {
@@ -387,7 +434,10 @@ $('domain-form').addEventListener('input', () => {
   $('domain-message').textContent = '';
 });
 $('check-dns').addEventListener('click', () => domains(false));
-$('domain-form').addEventListener('submit', event => { event.preventDefault(); domains(true); });
+$('domain-form').addEventListener('submit', event => {
+  event.preventDefault();
+  domains(true);
+});
 document.querySelectorAll('[data-filter]').forEach(node => {
   node.addEventListener('click', () => selectFilter(node.dataset.filter));
 });

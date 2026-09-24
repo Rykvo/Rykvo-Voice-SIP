@@ -8,7 +8,7 @@ Ubuntu 24.04 LTS · amd64 / arm64
 curl -fsSL https://raw.githubusercontent.com/Rykvo/Rykvo-Voice-SIP/main/deploy.sh | sudo bash -s -- install
 ```
 
-仓库公开后可用。在 SSH 终端执行，按提示填写管理员账号和密码；完成后访问 `https://服务器IP`。
+仓库公开后可用。在 SSH 终端执行，按提示填写管理员账号和密码；完成后访问 `https://服务器IP/gly`。
 
 ## 一键更新
 
