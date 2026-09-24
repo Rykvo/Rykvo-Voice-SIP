@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Rykvo Voice SIP</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=__ASSET_VERSION__">
+  <link rel="apple-touch-icon" href="/logo.png?v=__ASSET_VERSION__">
+  <link rel="stylesheet" href="/style.css?v=__ASSET_VERSION__">
+  <script src="/app.js?v=__ASSET_VERSION__" defer></script>
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><symbol id="i-server" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="7" rx="2"/><rect x="4" y="14" width="16" height="7" rx="2"/><path d="M8 6.5h.01M8 17.5h.01M12 6.5h4M12 17.5h4M12 10v4"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></symbol><symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h12"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol><symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol></defs></svg>
+<div id="boot-view" class="boot"><span id="boot-message">载入中…</span><button id="boot-retry" class="secondary" hidden>重试</button></div>
+<section id="login-view" class="login-wrap" hidden>
+  <div class="login-card">
+    <img class="brand-icon large" src="/logo.png?v=__ASSET_VERSION__" width="53" height="53" alt="">
+    <h1>Rykvo Voice SIP</h1>
+    <form id="login-form">
+      <label for="username">账号</label>
+      <input id="username" autocomplete="username" required>
+      <label for="password">密码</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <button class="primary login-button" type="submit">登录</button>
+    </form>
+    <p id="login-error" class="error" role="alert"></p>
+  </div>
+</section>
+<div id="app-view" class="window" hidden>
+  <aside class="sidebar">
+    <a class="brand" href="/"><img class="brand-icon" src="/logo.png?v=__ASSET_VERSION__" width="36" height="36" alt=""><strong>Rykvo Voice SIP</strong></a>
+    <nav aria-label="主导航">
+      <button class="nav-item active" data-page="clients"><span class="nav-icon blue"><svg><use href="#i-server"/></svg></span>客户端</button>
+      <button class="nav-item" data-page="domains"><span class="nav-icon green"><svg><use href="#i-globe"/></svg></span>域名设置</button>
+
+      <button class="nav-item" data-page="administrator"><span class="nav-icon blue"><svg><use href="#i-lock"/></svg></span>管理员</button>
+    </nav>
+    <div class="nav-divider"></div>
+    <button id="logout" class="nav-item"><span class="nav-icon pale-red"><svg><use href="#i-out"/></svg></span>退出登录</button>
+    <div class="sidebar-bottom"><span>IP：</span><span id="sidebar-ip">—</span></div>
+  </aside>
+  <main class="main-content">
+    <p id="global-error" class="error global-error" role="alert" hidden></p>
+    <section id="page-clients" class="page">
+      <header class="page-header"><h1>客户端</h1><button id="open-create" class="primary"><svg><use href="#i-plus"/></svg>新建客户端</button></header>
+      <div class="stats" aria-label="客户端状态筛选">
+        <button class="stat selected" data-filter="all" aria-pressed="true"><span><i class="dot blue-dot"></i>全部</span><strong id="stat-all">0</strong></button>
+        <button class="stat green-stat" data-filter="online" aria-pressed="false"><span><i class="dot green-dot"></i>已连接</span><strong id="stat-online">0</strong></button>
+        <button class="stat" data-filter="offline" aria-pressed="false"><span><i class="dot gray-dot"></i>未连接</span><strong id="stat-offline">0</strong></button>
+      </div>
+      <div class="toolbar"><label class="search"><svg><use href="#i-search"/></svg><input id="search" placeholder="搜索客户端" aria-label="搜索客户端"></label></div>
+      <div class="table-card">
+        <div id="client-list-scroll" class="table-scroll" tabindex="0" role="region" aria-label="客户端列表"><table><thead><tr><th>名称</th><th>隧道地址</th><th>端口范围</th><th>状态</th><th class="action-head">操作</th></tr></thead><tbody id="clients"></tbody></table>
+          <div id="empty" class="empty" hidden><svg><use href="#i-server"/></svg><h3 id="empty-title">暂无客户端</h3></div>
+        </div>
+        <div class="table-footer"><span id="table-count"></span></div>
+      </div>
+
+    </section>
+    <section id="page-domains" class="page" hidden>
+      <div class="settings-panel">
+        <header class="settings-heading"><span class="settings-symbol"><span class="nav-icon green"><svg><use href="#i-globe"/></svg></span></span><h1>域名设置</h1></header>
+        <form id="domain-form">
+          <div class="form-fields">
+            <div class="form-field"><span class="field-label">公网 IP</span><span id="settings-ip">—</span></div>
+            <div class="form-field"><label for="sip-domain">SIP 域名</label><input id="sip-domain" placeholder="sip.example.com" autocomplete="off" maxlength="253" spellcheck="false"></div>
+            <div class="form-field"><label for="panel-domain">面板域名</label><input id="panel-domain" placeholder="panel.example.com" autocomplete="off" maxlength="253" spellcheck="false"></div>
+          </div>
+          <p id="domain-message" class="form-message" role="status"></p>
+          <div class="form-actions"><button id="check-dns" type="button" class="secondary">检查 DNS</button><button id="save-domains" class="primary form-save" type="submit">保存修改</button></div>
+        </form>
+      </div>
+    </section>
+    <section id="page-administrator" class="page" hidden>
+      <div class="settings-panel">
+        <header class="settings-heading"><span class="settings-symbol"><span class="nav-icon blue"><svg><use href="#i-lock"/></svg></span></span><h1>管理员</h1></header>
+        <form id="admin-form">
+          <div class="form-fields">
+            <div class="form-field"><label for="admin-username">账号</label><input id="admin-username" autocomplete="off" maxlength="48" placeholder="留空不修改"></div>
+            <div class="form-field"><label for="admin-current">当前密码</label><input id="admin-current" type="password" autocomplete="current-password" maxlength="512" placeholder="输入当前密码" required><button type="button" class="eye-button" data-password="admin-current" aria-label="显示当前密码" aria-pressed="false"><svg><use href="#i-eye"/></svg></button></div>
+            <div class="form-field"><label for="admin-new">新密码</label><input id="admin-new" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="留空不修改"><button type="button" class="eye-button" data-password="admin-new" aria-label="显示新密码" aria-pressed="false"><svg><use href="#i-eye"/></svg></button></div>
+            <div class="form-field"><label for="admin-confirm">确认新密码</label><input id="admin-confirm" type="password" autocomplete="new-password" maxlength="128" placeholder="再次输入新密码"><button type="button" class="eye-button" data-password="admin-confirm" aria-label="显示确认新密码" aria-pressed="false"><svg><use href="#i-eye"/></svg></button></div>
+          </div>
+          <p id="admin-error" class="error" role="alert"></p>
+          <button id="save-admin" class="primary form-save" type="submit">保存修改</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+<dialog id="create-dialog">
+  <div class="dialog-header"><h2>新建客户端</h2><button class="close-button" data-close="create-dialog" aria-label="关闭新建客户端">×</button></div>
+  <form id="create-form">
+    <label for="client-name">名称</label><input id="client-name" maxlength="48" placeholder="家里的服务器" required>
+    <label for="port-start">端口范围 <span class="label-note">TCP / UDP</span></label>
+    <div class="range-input"><input id="port-start" type="number" min="1024" max="65535" placeholder="20000" aria-label="起始端口" required><span>—</span><input id="port-end" type="number" min="1024" max="65535" placeholder="29999" aria-label="结束端口" required></div>
+    <p class="field-hint">范围不可重叠，包含 SIP 与 RTP 端口。</p><p id="form-error" class="error" role="alert"></p>
+    <div class="dialog-actions"><button type="button" class="secondary" data-close="create-dialog">取消</button><button id="create-button" type="submit" class="primary">创建</button></div>
+  </form>
+</dialog>
+<dialog id="help-dialog">
+  <div class="dialog-header"><h2 id="help-title">连接客户端</h2><button class="close-button" data-close="help-dialog" aria-label="关闭连接">×</button></div>
+  <div class="connection-field"><label for="connect-endpoint">接入地址</label><div class="copy-field"><input id="connect-endpoint" readonly><button id="copy-endpoint" class="secondary">复制</button></div></div>
+  <div class="connection-field"><label for="connect-token">接入码</label><div class="copy-field"><input id="connect-token" type="text" readonly placeholder="点击下方生成"><button id="copy-token" class="secondary" disabled>复制</button></div></div>
+  <p id="connect-error" class="error" role="alert"></p>
+  <div class="dialog-actions"><button id="generate-token" class="primary">生成接入码</button></div>
+</dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

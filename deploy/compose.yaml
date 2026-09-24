@@ -1,0 +1,21 @@
+name: sip-tunnel
+services:
+  wg-easy:
+    image: ghcr.io/wg-easy/wg-easy:15.4.0
+    container_name: sip-wg-easy
+    network_mode: host
+    environment:
+      HOST: "127.0.0.1"
+      PORT: "51821"
+      INSECURE: "true"
+      DISABLE_IPV6: "true"
+    volumes:
+      - ./data:/etc/wireguard
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
