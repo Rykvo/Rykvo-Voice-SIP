@@ -22,4 +22,4 @@ sudo rykvo-sip update
 sudo rykvo-sip uninstall
 ```
 
-默认保留配置和数据。彻底删除使用 `sudo rykvo-sip uninstall --purge`，执行前需确认。
+完整删除本项目程序、配置和全部数据，执行前需确认。Docker、Caddy 等共享依赖保留。

@@ -53,10 +53,30 @@ class InstallerTests(unittest.TestCase):
                 m.uninstall()
             run.assert_not_called()
 
-    def test_purge_cancel_changes_nothing(self):
-        with patch.object(m, 'read_marker', return_value={}), patch('builtins.input', return_value='no'), patch.object(m, 'run') as run:
-            m.uninstall(purge=True)
+    def test_uninstall_cancel_changes_nothing(self):
+        with patch.object(m, 'read_marker', return_value={}), patch('builtins.input', return_value='no'), patch.object(m, 'run') as run, patch.object(m.shutil, 'rmtree') as delete:
+            m.uninstall()
             run.assert_not_called()
+            delete.assert_not_called()
+
+    def test_uninstall_deletes_all_project_data_by_default(self):
+        with patch.object(m, 'ROOT', Path('/opt/sip-tunnel')), \
+             patch.object(m, 'read_marker', return_value={'sysctl': {}}), \
+             patch('builtins.input', return_value='DELETE'), \
+             patch.object(m, 'run', return_value=Mock(stdout='', returncode=0)), \
+             patch.object(m, 'remove_rules') as rules, \
+             patch.object(m, 'compose') as compose, \
+             patch.object(Path, 'exists', return_value=True), \
+             patch.object(Path, 'is_file', return_value=False), \
+             patch.object(Path, 'is_symlink', return_value=False), \
+             patch.object(Path, 'resolve', return_value=Path('/opt/sip-tunnel')), \
+             patch.object(Path, 'unlink') as unlink, \
+             patch.object(m.shutil, 'rmtree') as delete:
+            m.uninstall()
+        compose.assert_called_once_with('down')
+        rules.assert_called_once()
+        self.assertEqual(unlink.call_count, 6)
+        delete.assert_called_once_with(Path('/opt/sip-tunnel'))
 
     def test_removes_only_owned_firewall_jumps(self):
         calls = []

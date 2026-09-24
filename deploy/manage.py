@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install only project-owned services; retain state by default."""
+"""Manage project-owned services and data."""
 import getpass
 import importlib.util
 import ipaddress
@@ -329,12 +329,9 @@ def remove_rules():
                 run(prefix + ['-X', chain])
 
 
-def uninstall(purge=False):
+def uninstall():
     state = read_marker()
-    if purge and input('将永久删除此项目的账号、密钥、证书和客户端数据。输入 DELETE 确认: ') != 'DELETE':
-        print('已取消。')
-        return
-    if not purge and input('停止并卸载服务，保留数据？[y/N]: ').lower() != 'y':
+    if input('将完整删除本项目程序、配置、账号、密钥、证书、客户端数据和备份。输入 DELETE 确认: ') != 'DELETE':
         print('已取消。')
         return
     run(['systemctl', 'disable', '--now', *SERVICES], check=False)
@@ -352,15 +349,12 @@ def uninstall(purge=False):
             if run(['sysctl', '-n', key]).stdout.strip() == '1':
                 run(['sysctl', '-w', key + '=' + value])
     run(['systemctl', 'daemon-reload'])
+    if ROOT.resolve() != Path('/opt/sip-tunnel') or ROOT.is_symlink():
+        raise ValueError('删除路径异常。')
+    shutil.rmtree(ROOT)
     if CLI.is_file() and not CLI.is_symlink() and CLI_MARKER in CLI.read_text():
         CLI.unlink()
-    if purge:
-        if ROOT.resolve() != Path('/opt/sip-tunnel') or ROOT.is_symlink():
-            raise ValueError('删除路径异常。')
-        shutil.rmtree(ROOT)
-        print('项目服务和数据已删除。Docker、Caddy 等共享依赖保留。')
-    else:
-        print('服务已卸载，配置、数据和证书保留在 /opt/sip-tunnel。再次安装会复用。')
+    print('本项目已完整卸载。Docker、Caddy 等共享依赖保留。')
 
 
 def main():
@@ -390,7 +384,9 @@ def main():
             panel.apply_rules(panel.load_state())
             input_rules()
     elif command == 'uninstall':
-        uninstall('--purge' in sys.argv[2:])
+        if len(sys.argv) != 2:
+            raise ValueError('卸载无需额外参数。')
+        uninstall()
     else:
         raise ValueError('未知操作。')
 
@@ -399,5 +395,5 @@ if __name__ == '__main__':
     try:
         main()
     except (Exception, KeyboardInterrupt) as error:
-        print(f'操作未完成：{error or "已取消"}。已有数据保持保留，请排查后重试。', file=sys.stderr)
+        print(f'操作未完成：{error or "已取消"}。请排查后重试。', file=sys.stderr)
         sys.exit(1)

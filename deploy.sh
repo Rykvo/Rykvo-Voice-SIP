@@ -12,9 +12,8 @@ cleanup() {
 main() {
   local action=${1:-install}
   case "$action" in
-    install|update) [[ $# -le 1 ]] || { echo '参数错误。'; return 1; } ;;
-    uninstall) [[ $# -le 2 && ( ${2:-} == '' || ${2:-} == --purge ) ]] || { echo '参数错误。'; return 1; } ;;
-    --help|-h) echo 'sudo rykvo-sip {install|update|uninstall [--purge]}'; return ;;
+    install|update|uninstall) [[ $# -le 1 ]] || { echo '参数错误。'; return 1; } ;;
+    --help|-h) echo 'sudo rykvo-sip {install|update|uninstall}'; return ;;
     *) echo '支持 install、update、uninstall。'; return 1 ;;
   esac
   [[ $EUID == 0 ]] || { echo '请使用 sudo 执行。'; return 1; }
@@ -27,7 +26,7 @@ main() {
     [[ -f /opt/sip-tunnel/.rykvo-managed.json && -f /opt/sip-tunnel/manager.py ]] || {
       echo '未发现此安装器管理的实例。'; return 1;
     }
-    python3 -B /opt/sip-tunnel/manager.py uninstall "${@:2}" </dev/tty
+    python3 -B /opt/sip-tunnel/manager.py uninstall </dev/tty
     return
   fi
   if [[ $action == update && ! -f /opt/sip-tunnel/.rykvo-managed.json ]]; then
