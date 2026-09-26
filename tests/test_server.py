@@ -90,6 +90,66 @@ class EnrollmentTests(unittest.TestCase):
   with self.assertRaises(m.UserError) as error:m.redeem_enrollment(self.token,self.identity)
   self.assertEqual(error.exception.status,410)
 
+ def admin_call(self,method):
+  from unittest.mock import Mock
+  handler=object.__new__(m.Handler)
+  handler.command=method;handler.path='/api/clients/9/enrollment'
+  host=f'127.0.0.1:{m.PORT}'
+  handler.headers={'Host':host,'Origin':'http://'+host}
+  handler.session=Mock(return_value=('fixture-session',{'upstream':m.Upstream()}))
+  handler.send=Mock()
+  handler.dispatch()
+  return handler.send.call_args.args
+ def test_legacy_code_is_not_replaced_on_read(self):
+  before=m.ENROLLMENTS.read_bytes()
+  status,result=self.admin_call('GET')
+  self.assertEqual(status,200)
+  self.assertTrue(result['hasCode'])
+  self.assertIsNone(result['token'])
+  self.assertEqual(before,m.ENROLLMENTS.read_bytes())
+  self.assertEqual(m.redeem_enrollment(self.token,self.identity)['client']['id'],9)
+ def test_generated_code_survives_repeated_reads_and_binding(self):
+  status,issued=self.admin_call('POST')
+  self.assertEqual(status,201)
+  token=issued['token']
+  self.assertEqual(len(token),43)
+  self.assertEqual(m.ENROLLMENTS.stat().st_mode & 0o777,0o600)
+  self.assertNotIn(token,m.STATE.read_text())
+  for _ in range(3):
+   self.assertEqual(self.admin_call('GET')[1]['token'],token)
+  m.redeem_enrollment(token,self.identity)
+  self.assertEqual(self.admin_call('GET')[1]['token'],token)
+  self.assertEqual(m.load_enrollments()['9']['installationId'],self.identity)
+ def test_rotation_and_revocation_remove_the_old_code(self):
+  first=self.admin_call('POST')[1]['token']
+  second=self.admin_call('POST')[1]['token']
+  self.assertNotEqual(first,second)
+  self.assertNotIn(first,m.ENROLLMENTS.read_text())
+  with self.assertRaises(m.UserError):m.redeem_enrollment(first,self.identity)
+  self.assertEqual(self.admin_call('GET')[1]['token'],second)
+  self.admin_call('DELETE')
+  result=self.admin_call('GET')[1]
+  self.assertIsNone(result['token'])
+  self.assertFalse(result['hasCode'])
+  self.assertNotIn(second,m.ENROLLMENTS.read_text())
+ def test_token_response_is_not_cached(self):
+  from unittest.mock import Mock
+  import io
+  handler=object.__new__(m.Handler);handler.command='GET';handler.wfile=io.BytesIO()
+  handler.send_response=Mock();handler.send_header=Mock();handler.end_headers=Mock()
+  handler.send(200,{'token':'fixture-token'})
+  handler.send_header.assert_any_call('Cache-Control','no-store')
+
+ def test_read_requires_admin_authentication(self):
+  from unittest.mock import Mock
+  handler=object.__new__(m.Handler)
+  handler.command='GET';handler.path='/api/clients/9/enrollment'
+  handler.headers={'Host':f'127.0.0.1:{m.PORT}'}
+  handler.session=Mock(side_effect=m.UserError('Unauthorized',401));handler.send=Mock()
+  with self.assertRaises(m.UserError) as error:handler.dispatch()
+  self.assertEqual(error.exception.status,401)
+  handler.send.assert_not_called()
+
 class DomainTests(unittest.TestCase):
  def setUp(self):
   public_ip=patch.object(m,'PUBLIC_IP','203.0.113.10')

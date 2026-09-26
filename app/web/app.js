@@ -105,17 +105,36 @@ function statusOf(client) {
   return client.lastHandshake && age >= -60000 && age < 180000 ? 'online' : 'offline';
 }
 
-function showHelp(client) {
+function renderEnrollment(result) {
+  $('connect-endpoint').value = result.endpoint;
+  $('connect-token').value = result.token || '';
+  $('connect-token').placeholder = result.hasCode ? '旧接入码需重新生成' : '点击下方生成';
+  $('copy-token').disabled = !result.token;
+  $('generate-token').textContent = result.hasCode || result.token ? '生成新的' : '生成接入码';
+}
+
+async function showHelp(client) {
   connectingClient = client.id;
-  connectionView++;
+  const view = ++connectionView;
   $('help-title').textContent = `连接 ${client.name}`;
   $('connect-endpoint').value = `https://${current.settings.sipDomain || current.publicIp}/api/connect`;
   $('connect-token').value = '';
+  $('connect-token').placeholder = '加载中…';
   $('copy-token').disabled = true;
-  $('generate-token').disabled = false;
+  $('generate-token').disabled = true;
   $('generate-token').textContent = '生成接入码';
   $('connect-error').textContent = '';
   $('help-dialog').showModal();
+  try {
+    const result = await request(`/api/clients/${client.id}/enrollment`);
+    if (view !== connectionView) return;
+    renderEnrollment(result);
+    $('generate-token').disabled = false;
+  } catch (error) {
+    if (view !== connectionView) return;
+    $('connect-token').placeholder = '';
+    $('connect-error').textContent = error.message;
+  }
 }
 
 async function generateToken() {
@@ -127,10 +146,7 @@ async function generateToken() {
   try {
     const result = await request(`/api/clients/${clientId}/enrollment`, 'POST', {});
     if (view !== connectionView) return;
-    $('connect-endpoint').value = result.endpoint;
-    $('connect-token').value = result.token;
-    $('copy-token').disabled = false;
-    $('generate-token').textContent = '生成新的';
+    renderEnrollment(result);
   } catch (error) {
     if (view === connectionView) $('connect-error').textContent = error.message;
   } finally {

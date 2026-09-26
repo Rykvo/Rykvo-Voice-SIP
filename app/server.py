@@ -679,18 +679,22 @@ class Handler(BaseHTTPRequestHandler):
                 if self.command=='GET' and match.group(2)=='/config':
                     return self.send(200,client_configuration(upstream,record),'application/octet-stream',
                                      {'Content-Disposition':f'attachment; filename="sip{client_id}.conf"'})
-                if match.group(2)=='/enrollment' and self.command in ('POST','DELETE'):
+                if match.group(2)=='/enrollment' and self.command in ('GET','POST','DELETE'):
                     codes=load_enrollments()
+                    if self.command=='GET':
+                        entry=codes.get(str(client_id),{})
+                        return self.send(200,{'endpoint':enrollment_endpoint(settings),'token':entry.get('token'),
+                                              'hasCode':bool(entry),'expiresAt':None})
                     if self.command=='DELETE':
                         codes.pop(str(client_id),None)
                         save_json(ENROLLMENTS,codes)
                         return self.send(200,{'ok':True})
                     client_configuration(upstream,record)
                     token=secrets.token_urlsafe(32)
-                    codes[str(client_id)]={'clientId':client_id,'hash':hashlib.sha256(token.encode()).hexdigest()}
+                    codes[str(client_id)]={'clientId':client_id,'hash':hashlib.sha256(token.encode()).hexdigest(),'token':token}
                     save_json(ENROLLMENTS,codes)
                     endpoint=enrollment_endpoint(settings)
-                    return self.send(201,{'endpoint':endpoint,'token':token,'expiresAt':None})
+                    return self.send(201,{'endpoint':endpoint,'token':token,'hasCode':True,'expiresAt':None})
                 if self.command=='DELETE' and not match.group(2):
                     # Remove exposure first; if upstream removal fails, restore the mapping.
                     new={'clients':[c for c in old['clients'] if c['id']!=client_id]}
